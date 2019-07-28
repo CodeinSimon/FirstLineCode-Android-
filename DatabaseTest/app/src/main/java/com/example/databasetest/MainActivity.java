@@ -3,8 +3,10 @@ package com.example.databasetest;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ContentValues;
+import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,42 +14,28 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 
 public class MainActivity extends AppCompatActivity {
-    private MyDatabaseHelper databaseHelper;
+    private String newId;
     private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        databaseHelper = new MyDatabaseHelper(this, "BookStore.db", null, 2);
-        Button createDatabase = (Button) findViewById(R.id.create_database);
-        createDatabase.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                databaseHelper.getWritableDatabase();
-            }
-        });
 
         Button addData = (Button) findViewById(R.id.add_data);
         addData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SQLiteDatabase database = databaseHelper.getWritableDatabase();
+                //add data
+                Uri uri = Uri.parse("content://com.example.databasetest.provider/book");
                 ContentValues values = new ContentValues();
                 //first data
-                values.put("name", "The Da Vinci Code");
-                values.put("author", "Dan Brown");
-                values.put("pages", 454);
-                values.put("price", 16.96);
-                database.insert("Book", null, values);
-
-                //the second data
-                values.clear();
-                values.put("name", "The Lost Symbol");
-                values.put("author", "Dan Brown");
-                values.put("pages", 510);
-                values.put("price", 19.95);
-                database.insert("Book", null, values);
+                values.put("name", "A Clash of Kings");
+                values.put("author", "Gorge Martin");
+                values.put("pages", 1040);
+                values.put("price", 22.85);
+                Uri newUri = getContentResolver().insert(uri, values);
+                newId = newUri.getPathSegments().get(1);
             }
         });
 
@@ -55,10 +43,12 @@ public class MainActivity extends AppCompatActivity {
         updateData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SQLiteDatabase database = databaseHelper.getWritableDatabase();
+                Uri uri = Uri.parse("content://com.example.databasetest.provider/book/" + newId);
                 ContentValues values = new ContentValues();
-                values.put("price", 10.99);
-                database.update("Book", values, "name=?", new String[] {"The Da Vinci Code"});
+                values.put("name", "A Storm of Swords");
+                values.put("pages", 1216);
+                values.put("price", 24.05);
+                getContentResolver().update(uri, values, null, null);
             }
         });
 
@@ -67,8 +57,8 @@ public class MainActivity extends AppCompatActivity {
         deleteData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SQLiteDatabase database = databaseHelper.getWritableDatabase();
-                database.delete("Book", "pages > ?", new String[] {"500"});
+                Uri uri = Uri.parse("content://com.example.databasetest.provider/book/" + newId);
+                getContentResolver().delete(uri, null, null);
             }
         });
 
@@ -76,10 +66,10 @@ public class MainActivity extends AppCompatActivity {
         queryData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SQLiteDatabase database = databaseHelper.getWritableDatabase();
-                Cursor cursor = database.query("Book", null, null, null, null, null, null);
-                if (cursor.moveToFirst()) {
-                    do {
+                Uri uri = Uri.parse("content://com.example.databasetest.provider/book");
+                Cursor cursor = getContentResolver().query(uri, null,  null, null, null);
+                if (cursor != null) {
+                    while (cursor.moveToNext()){
                         // 遍历 Cursor对象，取出数据并打印
                         String name = cursor.getString(cursor.getColumnIndex("name"));
                         String author = cursor.getString(cursor.getColumnIndex("author"));
@@ -89,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "author is: " + author);
                         Log.d(TAG, "pages is: " + pages);
                         Log.d(TAG, "price is: " + price);
-                    } while (cursor.moveToNext());
+                    }
                 }
                 cursor.close();
             }
